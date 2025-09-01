@@ -1,4 +1,4 @@
-# NEXA Enumeration Tool
+# NEXA - Network Enumeration & eXposure Analyzer
 
 <p align="center">
   <img src="NEXA-Logo.png" alt="NEXA Logo" width="400">

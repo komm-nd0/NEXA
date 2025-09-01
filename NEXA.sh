@@ -22,10 +22,9 @@ SCAN_RESULTS=""
 # Function to print banner
 print_banner() {
     clear
-    echo -e "${CYAN}"
+    echo -e "${RED}"
     echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║                    NEXA ENUMERATION TOOL                 ║"
-    echo "║                    Automated Security Assessment            ║"
+    echo "║     NEXA - Network Enumeration & eXposure Analyzer           ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
 }
