@@ -46,15 +46,15 @@ sudo apt update
 sudo apt install nmap ldap-utils
 ```
 
-#### macOS
+#### macOS / linux
 ```bash
-brew install nmap
+brew / sudo apt install nmap
 ```
 
-#### Python-based Tools
+#### Enum4linux-ng
 ```bash
 # enum4linux-ng for Windows/SMB enumeration
-pip3 install enum4linux-ng
+sudo apt install enum4linux-ng
 ```
 
 #### Go-based Tools
@@ -71,19 +71,19 @@ go install -v github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest
 1. Clone or download the script
 2. Make it executable:
    ```bash
-   chmod +x enumeration_tool.sh
+   chmod +x NEXA.sh
    ```
 
 ## Usage
 
 ### Basic Usage
 ```bash
-./enumeration_tool.sh
+./NEXA.sh
 ```
 
 ### Running with Root Privileges (Recommended)
 ```bash
-sudo ./enumeration_tool.sh
+sudo ./NEXA.sh
 ```
 
 ## Menu Structure
