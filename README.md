@@ -46,9 +46,9 @@ sudo apt update
 sudo apt install nmap ldap-utils
 ```
 
-#### macOS / linux
+#### macOS
 ```bash
-brew / sudo apt install nmap
+brew sudo apt install nmap
 ```
 
 #### Enum4linux-ng
