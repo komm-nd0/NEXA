@@ -24,7 +24,7 @@ print_banner() {
     clear
     echo -e "${CYAN}"
     echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║                    OBSCURA ENUMERATION TOOL                 ║"
+    echo "║                    NEXA ENUMERATION TOOL                 ║"
     echo "║                    Automated Security Assessment            ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
@@ -614,7 +614,7 @@ main() {
                 run_comprehensive_enumeration
                 ;;
             5)
-                echo -e "${GREEN}[+] Thank you for using Obscura Enumeration Tool!${NC}"
+                echo -e "${GREEN}[+] Thank you for using NEXA Enumeration Tool!${NC}"
                 show_results
                 exit 0
                 ;;
