@@ -1,7 +1,7 @@
 # NEXA Enumeration Tool
 
 <p align="center">
-  <img src="NEXA-Logo.png" alt="NEXA Logo" width="200">
+  <img src="NEXA-Logo.png" alt="NEXA Logo" width="400">
 </p>
 
 A comprehensive automated enumeration script for Windows and Linux targets, designed for security professionals and penetration testers.
