@@ -1,4 +1,4 @@
-# NEXA - Network Enumeration & eXposure Analyzer
+# NEXA - Network Enumeration & xXposure Analyzer
 
 <p align="center">
   <img src="./NEXA-logo.png" alt="NEXA Logo" width="400">

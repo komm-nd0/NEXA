@@ -24,7 +24,7 @@ print_banner() {
     clear
     echo -e "${RED}"
     echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║     NEXA - Network Enumeration & eXposure Analyzer           ║"
+    echo "║     NEXA - Network Enumeration & xXposure Analyzer           ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
 }
