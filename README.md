@@ -19,7 +19,7 @@ A comprehensive automated enumeration script for Windows and Linux targets, desi
 
 ### 🔍 Enumeration Capabilities
 - **Nmap Scans**: Basic, aggressive, and stealth scanning options
-- **Web Application Enumeration**: Directory enumeration, vulnerability scanning, subdomains via Sublist3r + live probing via httpx
+- **Web Application Enumeration**: Directory enumeration, vulnerability scanning, subdomains via Sublist3r
 - **Active Directory Enumeration**: SMB, LDAP, Kerberos, and NetExec (nxc) checks
 - **Service Enumeration**: Banner grabbing and service identification
 
@@ -153,7 +153,7 @@ enum_results_YYYYMMDD_HHMMSS/
 ### Web Enumeration
 - Directory enumeration using Gobuster
 - Vulnerability scanning with Nuclei (modern template-based scanner)
-- Subdomain discovery via Sublist3r and live validation with httpx
+- Subdomain discovery via Sublist3r
 - Port detection for web services (80, 443, 8080, 8443)
 
 ### Active Directory Enumeration
@@ -164,22 +164,20 @@ enum_results_YYYYMMDD_HHMMSS/
 
 ## Docker
 
-Build the image:
+Build the image (run from the project root):
 
 ```bash
-docker build -t nexa /path/to/NEXA
+docker build -t nexa .
 ```
 
-Run with host networking and bind mounts for outputs:
+Run with host networking and persist outputs to the current directory:
 
 ```bash
-docker run --rm -it --net=host \
-  -v /path/to/NEXA:/app \
-  -v /path/to/outputs:/app/output \
-  nexa
+mkdir -p outputs
+docker run --rm -it --net=host -v "$(pwd)/outputs:/app/output" nexa
 ```
 
-Inside the container, results are written under `/app/enum_results_...`. With the bind mounts above, you can access them on the host.
+Inside the container, results are written under `/app/enum_results_...` and will appear on the host under `./outputs`.
 
 ## Security Considerations
 

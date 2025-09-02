@@ -15,7 +15,6 @@ RUN apt-get update \
        nuclei \
        enum4linux-ng \
        ldap-utils \
-       httpx-toolkit \
        sublist3r \
        netexec \
        dirb \
@@ -26,21 +25,21 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY NEXA2.sh /app/NEXA2.sh
-COPY NEXA-Logo.png /app/NEXA-Logo.png
+COPY NEXA.sh /app/NEXA.sh
+COPY NEXA-logo.png /app/NEXA-logo.png
 
-RUN chmod +x /app/NEXA2.sh
+RUN chmod +x /app/NEXA.sh
 
 # Default output directory inside container will persistable via bind mount
 VOLUME ["/app/output"]
 
 # Helpful labels
-LABEL maintainer="Obscura Security Team" \
+LABEL maintainer="" \
       description="NEXA - Network Enumeration & eXposure Analyzer"
 
 # Usage:
 # docker build -t nexa .
 # docker run --rm -it --net=host -v $(pwd)/outputs:/app/output nexa
 
-ENTRYPOINT ["/app/NEXA2.sh"]
+ENTRYPOINT ["/app/NEXA.sh"]
 

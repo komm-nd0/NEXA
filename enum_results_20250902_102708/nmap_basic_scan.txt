@@ -1,0 +1,4 @@
+# Nmap 7.95 scan initiated Tue Sep  2 10:27:18 2025 as: /usr/lib/nmap/nmap --privileged -sS -sV -O -p- --min-rate=1000 -oN enum_results_20250902_102708/nmap_basic_scan.txt "10.10.73.166; ls"
+Failed to resolve "10.10.73.166; ls".
+WARNING: No targets were specified, so 0 hosts scanned.
+# Nmap done at Tue Sep  2 10:27:18 2025 -- 0 IP addresses (0 hosts up) scanned in 0.12 seconds

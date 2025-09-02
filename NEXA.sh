@@ -1,4 +1,5 @@
 #!/bin/bash
+trap 'echo; echo "Exiting..."; exit 0' INT TERM
 
 # Obscura Enumeration Tool
 # Automated enumeration script for Windows and Linux targets
@@ -19,12 +20,51 @@ TARGET_DOMAIN=""
 OUTPUT_DIR=""
 SCAN_RESULTS=""
 
+# Validate IPv4 address (strict 0-255 per octet)
+is_valid_ip() {
+    local ip="$1"
+    # Quick structure check
+    if [[ ! $ip =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+        return 1
+    fi
+    local IFS='.'
+    read -r o1 o2 o3 o4 <<< "$ip"
+    for octet in "$o1" "$o2" "$o3" "$o4"; do
+        # No leading plus/minus, numeric and within range
+        if ! [[ $octet =~ ^[0-9]+$ ]] || ((octet < 0 || octet > 255)); then
+            return 1
+        fi
+    done
+    return 0
+}
+
+# Validate domain name (basic RFC-compliant pattern)
+is_valid_domain() {
+    local domain="$1"
+    # Disallow leading/trailing dots or hyphens, require at least one dot, TLD >= 2
+    # Labels: alnum + hyphen (not start/end), 1-63 chars
+    if [[ $domain =~ ^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,}$ ]]; then
+        return 0
+    fi
+    return 1
+}
+
+# Reject inputs containing unsafe shell metacharacters
+contains_unsafe_chars() {
+    local s="$1"
+    # Allow only alnum, dot and hyphen. Anything else is unsafe for a target value.
+    if [[ $s =~ [^A-Za-z0-9.-] ]]; then
+        return 0
+    fi
+    return 1
+}
+
 # Function to print banner
 print_banner() {
     clear
     echo -e "${RED}"
     echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║     NEXA - Network Enumeration & eXposure Analyzer           ║"
+    echo "║     NEXA - Network Enumeration & xXposure Analyzer           ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
 }
@@ -60,6 +100,17 @@ check_dependencies() {
         missing_deps+=("ldap-utils")
     fi
     
+    
+    # Check for Sublist3r
+    if ! command -v sublist3r &> /dev/null; then
+        missing_deps+=("sublist3r")
+    fi
+    
+    # Check for NetExec (nxc)
+    if ! command -v nxc &> /dev/null; then
+        missing_deps+=("nxc")
+    fi
+    
     if [ ${#missing_deps[@]} -ne 0 ]; then
         echo -e "${RED}[!] Missing dependencies: ${missing_deps[*]}${NC}"
         echo -e "${YELLOW}[*] Install missing dependencies:${NC}"
@@ -80,6 +131,12 @@ check_dependencies() {
                 "ldap-utils")
                     echo "  - ldap-utils: sudo apt install ldap-utils (Ubuntu/Debian)"
                     ;;
+                "sublist3r")
+                    echo "  - Sublist3r: sudo apt install sublist3r (Kali) or pip3 install sublist3r"
+                    ;;
+                "nxc")
+                    echo "  - nxc (NetExec): sudo apt install netexec (Kali) or pipx install netexec"
+                    ;;
             esac
         done
         exit 1
@@ -92,32 +149,44 @@ check_dependencies() {
 get_target_info() {
     echo -e "${BLUE}[*] Target Information${NC}"
     
-    # Ask for target type first
-    echo -e "${YELLOW}Enter target (IP address or domain):${NC}"
-    read -p "> " TARGET_INPUT
-    
-    # Determine if input is IP or domain
-    if [[ $TARGET_INPUT =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        TARGET_IP="$TARGET_INPUT"
-        TARGET_DOMAIN=""
-        echo -e "${GREEN}[+] Target identified as IP address: $TARGET_IP${NC}"
-    else
-        TARGET_DOMAIN="$TARGET_INPUT"
-        TARGET_IP=""
-        echo -e "${GREEN}[+] Target identified as domain: $TARGET_DOMAIN${NC}"
+    # Ask for target, validate and loop until safe
+    while true; do
+        echo -e "${YELLOW}Enter target (IPv4 or domain):${NC}"
+        read -p "> " TARGET_INPUT
         
-        # Optionally resolve domain to IP for additional scanning
-        echo -e "${YELLOW}Do you want to resolve domain to IP for additional scanning? (y/n):${NC}"
-        read -p "> " resolve_choice
-        if [[ $resolve_choice =~ ^[Yy]$ ]]; then
-            TARGET_IP=$(dig +short "$TARGET_DOMAIN" | head -1)
-            if [ -n "$TARGET_IP" ]; then
-                echo -e "${GREEN}[+] Resolved IP: $TARGET_IP${NC}"
-            else
-                echo -e "${YELLOW}[!] Could not resolve domain to IP${NC}"
-            fi
+        if contains_unsafe_chars "$TARGET_INPUT"; then
+            echo -e "${RED}[!] Invalid characters detected. Use only letters, numbers, '.' and '-'${NC}"
+            continue
         fi
-    fi
+        
+        if is_valid_ip "$TARGET_INPUT"; then
+            TARGET_IP="$TARGET_INPUT"
+            TARGET_DOMAIN=""
+            echo -e "${GREEN}[+] Target identified as IP address: $TARGET_IP${NC}"
+            break
+        fi
+        
+        if is_valid_domain "$TARGET_INPUT"; then
+            TARGET_DOMAIN="$TARGET_INPUT"
+            TARGET_IP=""
+            echo -e "${GREEN}[+] Target identified as domain: $TARGET_DOMAIN${NC}"
+            
+            echo -e "${YELLOW}Do you want to resolve domain to IP for additional scanning? (y/n):${NC}"
+            read -p "> " resolve_choice
+            if [[ $resolve_choice =~ ^[Yy]$ ]]; then
+                TARGET_IP=$(dig +short "$TARGET_DOMAIN" | head -1)
+                if [ -n "$TARGET_IP" ] && is_valid_ip "$TARGET_IP"; then
+                    echo -e "${GREEN}[+] Resolved IP: $TARGET_IP${NC}"
+                else
+                    TARGET_IP=""
+                    echo -e "${YELLOW}[!] Could not resolve domain to a valid IP${NC}"
+                fi
+            fi
+            break
+        fi
+        
+        echo -e "${RED}[!] Invalid input. Enter a valid IPv4 or domain (e.g., 192.168.1.10 or example.com).${NC}"
+    done
     
     # Create output directory
     OUTPUT_DIR="enum_results_$(date +%Y%m%d_%H%M%S)"
@@ -192,6 +261,18 @@ run_web_enumeration() {
     local web_output_dir="$OUTPUT_DIR/web_enumeration"
     mkdir -p "$web_output_dir"
     
+    # If domain provided, run subdomain enumeration first
+    if [ -n "$TARGET_DOMAIN" ]; then
+        echo -e "${CYAN}[*] Running subdomain enumeration (Sublist3r)...${NC}"
+        local subs_file="$web_output_dir/subdomains.txt"
+        local live_subs_file="$web_output_dir/live_subdomains.txt"
+        sublist3r -d "$TARGET_DOMAIN" -o "$subs_file" >/dev/null 2>&1
+        # httpx removed; copy discovered subdomains as-is
+        if [ -s "$subs_file" ]; then
+            cp "$subs_file" "$live_subs_file"
+        fi
+    fi
+    
     # Directory enumeration with gobuster
     echo -e "${CYAN}[*] Running directory enumeration...${NC}"
     local dir_output="$web_output_dir/gobuster_dirs.txt"
@@ -222,6 +303,18 @@ run_web_enumeration() {
         echo "Domain: $TARGET_DOMAIN"
         echo "Timestamp: $(date)"
         echo ""
+        if [ -n "$TARGET_DOMAIN" ]; then
+            echo "=== Subdomain Enumeration ==="
+            if [ -f "$web_output_dir/subdomains.txt" ]; then
+                echo "Subdomains found:"
+                wc -l < "$web_output_dir/subdomains.txt" 2>/dev/null || true
+            fi
+            if [ -f "$web_output_dir/live_subdomains.txt" ]; then
+                echo "Live subdomains (via httpx):"
+                cat "$web_output_dir/live_subdomains.txt"
+            fi
+            echo ""
+        fi
         echo "=== Directory Enumeration ==="
         if [ -f "$dir_output" ]; then
             cat "$dir_output"
@@ -314,6 +407,35 @@ run_kerberos_enumeration() {
     echo -e "${GREEN}[+] Kerberos enumeration completed: $kerberos_output${NC}"
 }
 
+# Function to run NetExec (nxc) enumeration for AD-related services
+run_nxc_enumeration() {
+    echo -e "${BLUE}[*] Running NetExec (nxc) enumeration...${NC}"
+    local ad_output_dir="$OUTPUT_DIR/ad_enumeration"
+    mkdir -p "$ad_output_dir"
+    local nxc_output="$ad_output_dir/nxc_enum.txt"
+    local target_value
+    if [ -n "$TARGET_IP" ]; then
+        target_value="$TARGET_IP"
+    else
+        target_value="$TARGET_DOMAIN"
+    fi
+    {
+        echo "=== NetExec (nxc) Enumeration ==="
+        echo "Target: $target_value"
+        echo "Timestamp: $(date)"
+        echo ""
+        echo "-- nxc smb --"
+        nxc smb "$target_value" --shares --pass-pol 2>&1 || true
+        echo ""
+        echo "-- nxc ldap --"
+        nxc ldap "$target_value" --asreproast 2>&1 || true
+        echo ""
+        echo "-- nxc winrm --"
+        nxc winrm "$target_value" -M spooler 2>&1 || true
+    } > "$nxc_output"
+    echo -e "${GREEN}[+] NetExec (nxc) enumeration completed: $nxc_output${NC}"
+}
+
 # Function to run full AD enumeration
 run_full_ad_enumeration() {
     echo -e "${BLUE}[*] Starting full Active Directory enumeration...${NC}"
@@ -327,6 +449,7 @@ run_full_ad_enumeration() {
     run_smb_enumeration
     run_ldap_enumeration
     run_kerberos_enumeration
+    run_nxc_enumeration
     
     # Generate summary report
     local summary_file="$OUTPUT_DIR/ad_enumeration_summary.txt"
@@ -342,6 +465,7 @@ run_full_ad_enumeration() {
         echo "SMB Enumeration: $OUTPUT_DIR/ad_enumeration/enum4linux-ng_smb.txt"
         echo "LDAP Enumeration: $OUTPUT_DIR/ad_enumeration/ldap_enum.txt"
         echo "Kerberos Enumeration: $OUTPUT_DIR/ad_enumeration/kerberos_enum.txt"
+        echo "NetExec Enumeration: $OUTPUT_DIR/ad_enumeration/nxc_enum.txt"
         echo ""
         echo "=== RECOMMENDATIONS ==="
         echo "1. Review SMB enumeration for user accounts and shares"
@@ -537,8 +661,9 @@ handle_ad_menu() {
         echo -e "${YELLOW}2.${NC} SMB Enumeration (enum4linux-ng)"
         echo -e "${YELLOW}3.${NC} LDAP Enumeration"
         echo -e "${YELLOW}4.${NC} Kerberos Enumeration"
-        echo -e "${YELLOW}5.${NC} Full AD Enumeration (All Above)"
-        echo -e "${YELLOW}6.${NC} Back to Main Menu"
+        echo -e "${YELLOW}5.${NC} NXC Enumeration (NetExec)"
+        echo -e "${YELLOW}6.${NC} Full AD Enumeration (All Above)"
+        echo -e "${YELLOW}7.${NC} Back to Main Menu"
         echo ""
         
         echo -e "${YELLOW}Select an option:${NC}"
@@ -558,9 +683,12 @@ handle_ad_menu() {
                 run_kerberos_enumeration
                 ;;
             5)
-                run_full_ad_enumeration
+                run_nxc_enumeration
                 ;;
             6)
+                run_full_ad_enumeration
+                ;;
+            7)
                 return
                 ;;
             *)
