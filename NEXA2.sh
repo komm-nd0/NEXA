@@ -60,6 +60,21 @@ check_dependencies() {
         missing_deps+=("ldap-utils")
     fi
     
+    # Check for httpx
+    if ! command -v httpx &> /dev/null; then
+        missing_deps+=("httpx")
+    fi
+    
+    # Check for Sublist3r
+    if ! command -v sublist3r &> /dev/null; then
+        missing_deps+=("sublist3r")
+    fi
+    
+    # Check for NetExec (nxc)
+    if ! command -v nxc &> /dev/null; then
+        missing_deps+=("nxc")
+    fi
+    
     if [ ${#missing_deps[@]} -ne 0 ]; then
         echo -e "${RED}[!] Missing dependencies: ${missing_deps[*]}${NC}"
         echo -e "${YELLOW}[*] Install missing dependencies:${NC}"
@@ -79,6 +94,15 @@ check_dependencies() {
                     ;;
                 "ldap-utils")
                     echo "  - ldap-utils: sudo apt install ldap-utils (Ubuntu/Debian)"
+                    ;;
+                "httpx")
+                    echo "  - httpx: sudo apt install httpx-toolkit (Kali) or go install github.com/projectdiscovery/httpx/cmd/httpx@latest"
+                    ;;
+                "sublist3r")
+                    echo "  - Sublist3r: sudo apt install sublist3r (Kali) or pip3 install sublist3r"
+                    ;;
+                "nxc")
+                    echo "  - nxc (NetExec): sudo apt install netexec (Kali) or pipx install netexec"
                     ;;
             esac
         done
@@ -192,6 +216,17 @@ run_web_enumeration() {
     local web_output_dir="$OUTPUT_DIR/web_enumeration"
     mkdir -p "$web_output_dir"
     
+    # If domain provided, run subdomain enumeration first
+    if [ -n "$TARGET_DOMAIN" ]; then
+        echo -e "${CYAN}[*] Running subdomain enumeration (Sublist3r + httpx)...${NC}"
+        local subs_file="$web_output_dir/subdomains.txt"
+        local live_subs_file="$web_output_dir/live_subdomains.txt"
+        sublist3r -d "$TARGET_DOMAIN" -o "$subs_file" >/dev/null 2>&1
+        if [ -s "$subs_file" ]; then
+            cat "$subs_file" | httpx -silent -status-code -title -ip -o "$live_subs_file" 2>/dev/null
+        fi
+    fi
+    
     # Directory enumeration with gobuster
     echo -e "${CYAN}[*] Running directory enumeration...${NC}"
     local dir_output="$web_output_dir/gobuster_dirs.txt"
@@ -222,6 +257,18 @@ run_web_enumeration() {
         echo "Domain: $TARGET_DOMAIN"
         echo "Timestamp: $(date)"
         echo ""
+        if [ -n "$TARGET_DOMAIN" ]; then
+            echo "=== Subdomain Enumeration ==="
+            if [ -f "$web_output_dir/subdomains.txt" ]; then
+                echo "Subdomains found:"
+                wc -l < "$web_output_dir/subdomains.txt" 2>/dev/null || true
+            fi
+            if [ -f "$web_output_dir/live_subdomains.txt" ]; then
+                echo "Live subdomains (via httpx):"
+                cat "$web_output_dir/live_subdomains.txt"
+            fi
+            echo ""
+        fi
         echo "=== Directory Enumeration ==="
         if [ -f "$dir_output" ]; then
             cat "$dir_output"
@@ -314,6 +361,35 @@ run_kerberos_enumeration() {
     echo -e "${GREEN}[+] Kerberos enumeration completed: $kerberos_output${NC}"
 }
 
+# Function to run NetExec (nxc) enumeration for AD-related services
+run_nxc_enumeration() {
+    echo -e "${BLUE}[*] Running NetExec (nxc) enumeration...${NC}"
+    local ad_output_dir="$OUTPUT_DIR/ad_enumeration"
+    mkdir -p "$ad_output_dir"
+    local nxc_output="$ad_output_dir/nxc_enum.txt"
+    local target_value
+    if [ -n "$TARGET_IP" ]; then
+        target_value="$TARGET_IP"
+    else
+        target_value="$TARGET_DOMAIN"
+    fi
+    {
+        echo "=== NetExec (nxc) Enumeration ==="
+        echo "Target: $target_value"
+        echo "Timestamp: $(date)"
+        echo ""
+        echo "-- nxc smb --"
+        nxc smb "$target_value" --shares --pass-pol 2>&1 || true
+        echo ""
+        echo "-- nxc ldap --"
+        nxc ldap "$target_value" --asreproast 2>&1 || true
+        echo ""
+        echo "-- nxc winrm --"
+        nxc winrm "$target_value" -M spooler 2>&1 || true
+    } > "$nxc_output"
+    echo -e "${GREEN}[+] NetExec (nxc) enumeration completed: $nxc_output${NC}"
+}
+
 # Function to run full AD enumeration
 run_full_ad_enumeration() {
     echo -e "${BLUE}[*] Starting full Active Directory enumeration...${NC}"
@@ -327,6 +403,7 @@ run_full_ad_enumeration() {
     run_smb_enumeration
     run_ldap_enumeration
     run_kerberos_enumeration
+    run_nxc_enumeration
     
     # Generate summary report
     local summary_file="$OUTPUT_DIR/ad_enumeration_summary.txt"
@@ -342,6 +419,7 @@ run_full_ad_enumeration() {
         echo "SMB Enumeration: $OUTPUT_DIR/ad_enumeration/enum4linux-ng_smb.txt"
         echo "LDAP Enumeration: $OUTPUT_DIR/ad_enumeration/ldap_enum.txt"
         echo "Kerberos Enumeration: $OUTPUT_DIR/ad_enumeration/kerberos_enum.txt"
+        echo "NetExec Enumeration: $OUTPUT_DIR/ad_enumeration/nxc_enum.txt"
         echo ""
         echo "=== RECOMMENDATIONS ==="
         echo "1. Review SMB enumeration for user accounts and shares"
@@ -537,8 +615,9 @@ handle_ad_menu() {
         echo -e "${YELLOW}2.${NC} SMB Enumeration (enum4linux-ng)"
         echo -e "${YELLOW}3.${NC} LDAP Enumeration"
         echo -e "${YELLOW}4.${NC} Kerberos Enumeration"
-        echo -e "${YELLOW}5.${NC} Full AD Enumeration (All Above)"
-        echo -e "${YELLOW}6.${NC} Back to Main Menu"
+        echo -e "${YELLOW}5.${NC} NXC Enumeration (NetExec)"
+        echo -e "${YELLOW}6.${NC} Full AD Enumeration (All Above)"
+        echo -e "${YELLOW}7.${NC} Back to Main Menu"
         echo ""
         
         echo -e "${YELLOW}Select an option:${NC}"
@@ -558,9 +637,12 @@ handle_ad_menu() {
                 run_kerberos_enumeration
                 ;;
             5)
-                run_full_ad_enumeration
+                run_nxc_enumeration
                 ;;
             6)
+                run_full_ad_enumeration
+                ;;
+            7)
                 return
                 ;;
             *)

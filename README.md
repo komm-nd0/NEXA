@@ -19,8 +19,8 @@ A comprehensive automated enumeration script for Windows and Linux targets, desi
 
 ### 🔍 Enumeration Capabilities
 - **Nmap Scans**: Basic, aggressive, and stealth scanning options
-- **Web Application Enumeration**: Directory enumeration, vulnerability scanning
-- **Active Directory Enumeration**: SMB, LDAP, and Kerberos enumeration
+- **Web Application Enumeration**: Directory enumeration, vulnerability scanning, subdomains via Sublist3r + live probing via httpx
+- **Active Directory Enumeration**: SMB, LDAP, Kerberos, and NetExec (nxc) checks
 - **Service Enumeration**: Banner grabbing and service identification
 
 ### 🎨 User Interface
@@ -116,8 +116,9 @@ sudo ./NEXA.sh
 2. **SMB Enumeration** - Windows SMB service enumeration with enum4linux-ng
 3. **LDAP Enumeration** - Active Directory LDAP service enumeration
 4. **Kerberos Enumeration** - Windows authentication service enumeration
-5. **Full AD Enumeration** - Complete Active Directory assessment
-6. **Back to Main Menu**
+5. **NXC Enumeration** - NetExec-based AD service checks (smb/ldap/winrm)
+6. **Full AD Enumeration** - Complete Active Directory assessment
+7. **Back to Main Menu**
 
 ## Output Structure
 
@@ -152,12 +153,33 @@ enum_results_YYYYMMDD_HHMMSS/
 ### Web Enumeration
 - Directory enumeration using Gobuster
 - Vulnerability scanning with Nuclei (modern template-based scanner)
+- Subdomain discovery via Sublist3r and live validation with httpx
 - Port detection for web services (80, 443, 8080, 8443)
 
 ### Active Directory Enumeration
 - SMB enumeration with enum4linux-ng (modern Python 3 tool)
 - LDAP enumeration on ports 389, 636, 3268, 3269
 - Kerberos enumeration on ports 88, 464
+- NetExec (nxc) enumeration modules for SMB/LDAP/WinRM
+
+## Docker
+
+Build the image:
+
+```bash
+docker build -t nexa /path/to/NEXA
+```
+
+Run with host networking and bind mounts for outputs:
+
+```bash
+docker run --rm -it --net=host \
+  -v /path/to/NEXA:/app \
+  -v /path/to/outputs:/app/output \
+  nexa
+```
+
+Inside the container, results are written under `/app/enum_results_...`. With the bind mounts above, you can access them on the host.
 
 ## Security Considerations
 
