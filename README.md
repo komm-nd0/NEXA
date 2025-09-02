@@ -1,7 +1,7 @@
 # NEXA - Network Enumeration & eXposure Analyzer
 
 <p align="center">
-  <img src="NEXA-Logo.png" alt="NEXA Logo" width="400">
+  <img src="./NEXA-logo.png" alt="NEXA Logo" width="400">
 </p>
 
 A comprehensive automated enumeration script for Windows and Linux targets, designed for security professionals and penetration testers.
