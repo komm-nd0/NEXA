@@ -1,0 +1,11 @@
+{
+  "id": "nexa-integration",
+  "name": "NEXA Integration",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Integrate NEXA reconnaissance results into Obsidian for organized penetration testing documentation",
+  "author": "NEXA Team",
+  "authorUrl": "https://github.com/nexa-team",
+  "fundingUrl": "https://github.com/sponsors/nexa-team",
+  "isDesktopOnly": false
+}

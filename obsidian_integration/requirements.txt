@@ -1,0 +1,22 @@
+# NEXA-Obsidian Integration Requirements
+# Python dependencies for the integration scripts
+
+# Core dependencies
+pathlib2>=2.3.7; python_version < "3.4"
+typing-extensions>=4.0.0; python_version < "3.8"
+
+# Optional: For enhanced file parsing
+beautifulsoup4>=4.11.0
+lxml>=4.9.0
+
+# Optional: For JSON handling (built-in, but explicit for clarity)
+# json - built-in module
+
+# Optional: For date/time handling (built-in, but explicit for clarity)  
+# datetime - built-in module
+
+# Optional: For regex operations (built-in, but explicit for clarity)
+# re - built-in module
+
+# Optional: For file system operations (built-in, but explicit for clarity)
+# os, shutil - built-in modules
